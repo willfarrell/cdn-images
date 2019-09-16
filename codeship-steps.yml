@@ -1,0 +1,55 @@
+# General Template
+# NodeJS: willfarrell/serverless-template
+# go: TODO
+
+- name: Setup CI/CD
+  type: serial
+  service: base
+  steps:
+    - command: setup-env
+
+- name: Build Application
+  type: serial
+  service: node
+  steps:
+    #- command: npm-version
+    - command: npm-env-check
+    - command: dotenv-make
+    - name: Install Dependencies
+      command: npm ci
+
+#- name: CI Application
+#  type: parallel
+#  steps:
+#    - name: Code - Linting
+#      service: node
+#      command: npm run lint
+#    # TODO record & compare percent
+#    - name: Unit & Integration Tests
+#      service: node
+#      command: npm test
+#    - name: NPM Networking & Permissions
+#      service: node
+#      command: npm doctor
+#    # TODO record & compare count
+#    - name: Dependencies - Outdated
+#      service: node
+#      command: npm outdated
+#    # TODO record & compare count
+#    - name: Dependencies - Security
+#      service: node
+#      command: npm audit
+
+- name: Save Application Build
+  type: serial
+  service: serverless
+  steps:
+    - command: aws-env-check
+    - command: aws-auth
+
+- name: Deploy Application
+  type: serial
+  service: serverless
+  steps:
+    - tag: ^(master|develop|release/.*|v[0-9]+\.[0-9]+\.[0-9]+)
+      command: sh -c 'serverless deploy --SLS_DEBUG=* --verbose --force --stage="cdn" --environment="${ENVIRONMENT}" --aws-profile="${AWS_DEFAULT_PROFILE}"'

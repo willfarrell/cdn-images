@@ -1,0 +1,98 @@
+service: image
+
+plugins:
+  - serverless-pseudo-parameters        # Allow inline AWS ref vars
+  - serverless-prune-plugin             # Clean up old versions of lambda
+  - serverless-plugin-tracing           # X-Ray
+  - serverless-apigw-binary             # Allow Binary responses
+  - serverless-apigwy-binary            # AWS convert to raw binary
+  #- serverless-plugin-warmup            # Pre-Warm Requests
+  #- serverless-mocha-plugin             # Integration testing
+  - serverless-offline                  # Local testing of HTTP Events, needs to be last in the list
+
+custom:
+  config: "${file(./config.json)}"
+  stage: ${opt:stage, 'localhost'}
+  region: ${opt:region, 'us-east-1'}
+  prune:
+    automatic: true
+    number: 5
+  apigwBinary:
+    types:
+      - 'image/jpeg'
+      - 'image/gif'
+      - 'image/png'
+      - 'image/webp'
+      - 'video/webm'
+  warmup:
+    enabled: false
+    events:
+      - schedule: 'cron(0/15 * ? * MON-FRI *)'
+    prewarm: true
+  serverless-offline:
+    port: 3000
+
+provider:
+  name: aws
+  runtime: nodejs10.x
+  stage: ${self:custom.stage}
+  region: ${self:custom.region}
+  endpointType: EDGE
+  versionFunctions: true
+  environment:
+    NODE_ENV: ${opt:environment}
+    BUCKET: ${self:custom.config.app}-${opt:environment}-static-assets
+    PREFIX: ${self:custom.config.prefix}
+  logs:
+    restAPI: true
+  iamRoleStatements:
+    - Effect: 'Allow'
+      Action:
+        - 's3:GetObject'
+      Resource:
+        - 'arn:aws:s3:::${self:custom.config.app}-${opt:environment}-static-assets/${self:custom.config.prefix}*'
+    # serverless-plugin-warmup
+    - Effect: 'Allow'
+      Action:
+        - 'lambda:InvokeFunction'
+      Resource:
+        - Fn::Join:
+            - ':'
+            - - arn:aws:lambda
+              - Ref: AWS::Region
+              - Ref: AWS::AccountId
+              - function:${self:service}-${opt:stage, self:provider.stage}-*
+
+# Massive hack to prevent `EMFILE: too many open files, scandir` and `Unzipped size must be smaller than 262144000 bytes`
+package:
+  individually: false
+  excludeDevDependencies: true
+  exclude:
+    - ./**
+  include:
+    - package.json
+    - node_modules/**
+    - '!node_modules/serverless/**'
+    - '!node_modules/serverless-*/**'
+    - src/**
+
+functions:
+
+  process:
+    description: output as original format
+    memorySize: 1024
+    timeout: 30
+    handler: src/handlers/index.handler
+    events:
+      - http:
+          path: img/{image}
+          method: GET
+          contentHandling: CONVERT_TO_BINARY
+    iamRoleStatements:
+      - Effect: 'Allow'
+        Action:
+          - 's3:GetObject'
+        Resource:
+          - 'arn:aws:s3:::${self:custom.config.app}-${opt:environment}-static-assets/${self:custom.config.prefix}*'
+
+

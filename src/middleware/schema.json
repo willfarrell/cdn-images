@@ -1,0 +1,73 @@
+{
+  "type": "object",
+  "properties": {
+    "headers": {
+      "type": "object",
+      "properties": {
+        "downlink": {
+          "type": "number"
+        },
+        "dpr": {
+          "type": "integer",
+          "default": 1
+        },
+        "ect": {
+          "type": "string",
+          "default": "4g",
+          "enum": ["4g","3g","2g","slow-2g"]
+        },
+        "save-data": {
+          "type": "string",
+          "default": "no",
+          "enum": ["no","yes"]
+        },
+        "viewport-width": {
+          "type": "integer"
+        },
+        "width": {
+          "type": "integer"
+        }
+      }
+    },
+    "pathParameters": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "type": "string"
+        }
+      },
+      "required": ["image"]
+    },
+    "queryStringParameters": {
+      "type": "object",
+      "properties": {
+        "fm": {
+          "description": "output format of the image",
+          "type": "string",
+          "_future": ["gif","svg","webm"],
+          "enum": ["jpeg","png","webp"]
+        },
+        "h": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "w": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "grayscale": {
+          "type": "boolean",
+          "default": false
+        },
+        "bg": {
+          "type": "string"
+        },
+        "fit": {
+          "type": "string",
+          "enum": ["cover","contain","fill","inside","outside"]
+        }
+      }
+    }
+  },
+  "required": ["pathParameters"]
+}
